@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🌱 AgroTwin — Smart Agriculture Digital Twin
 
 A real-time digital twin where IoT sensor data is collected via ESP32, stored in Firebase,
@@ -252,3 +253,7 @@ if predicted_moisture < 45%  OR  predicted_health < 55:
 ## License
 
 MIT — free to use, modify, and deploy.
+=======
+# crop-monitor-with-digitaltwin
+Real time crop monitor with digital twin 
+>>>>>>> 4910f8d887eb4a058e7b1e4a8e27fc437e1855da
