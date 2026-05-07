@@ -94,11 +94,11 @@ const Dashboard = (() => {
       responsive: true, maintainAspectRatio: false, animation: false,
       plugins: {
         legend: { labels: { color: '#7a6e62', font: { family: 'DM Mono', size: 9 }, boxWidth: 12 } },
-        tooltip: { backgroundColor: '#141210', borderColor: '#2a2520', borderWidth: 1, titleColor: '#c8bfb0', bodyColor: '#7a6e62', titleFont: { family: 'DM Mono', size: 10 } },
+        tooltip: { backgroundColor: '#ffffff', borderColor: '#e4dbd2', borderWidth: 1, titleColor: '#2f2a24', bodyColor: '#615a51', titleFont: { family: 'DM Mono', size: 10 } },
       },
       scales: {
-        x: { ticks: { color: '#3d3830', font: { family: 'DM Mono', size: 8 }, maxTicksLimit: 6 }, grid: { color: '#1a1714' } },
-        y: { ticks: { color: '#3d3830', font: { family: 'DM Mono', size: 8 } }, grid: { color: '#1a1714' } },
+        x: { ticks: { color: '#615a51', font: { family: 'DM Mono', size: 8 }, maxTicksLimit: 6 }, grid: { color: '#e8e1d9' } },
+        y: { ticks: { color: '#615a51', font: { family: 'DM Mono', size: 8 } }, grid: { color: '#e8e1d9' } },
       },
     };
   }
