@@ -2,12 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+  <meta name="theme-color" content="#4a7e50"/>
   <title>AgroTwin — Simulator</title>
+  <link rel="stylesheet" href="css/style.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-  <script src="js/firebase_config.js"></script>
-  <link rel="stylesheet" href="css/style.css?v=2"/>
+  <script src="js/theme.js"></script>
+  <script src="js/app.js"></script>
 </head>
 <body>
 
@@ -24,203 +26,229 @@
     <a class="nav-tab" href="index.html">Dashboard</a>
     <a class="nav-tab active" href="simulator.html">Simulator</a>
     <a class="nav-tab" href="predictions.html">Predictions</a>
+    <a class="nav-tab" href="history.html">History</a>
   </nav>
   <div class="header-time" id="header-clock">--:--:--</div>
 </header>
 
-<main class="dashboard-grid" style="grid-template-columns:300px 1fr">
+<div class="offline-banner" id="offline-banner"></div>
 
-  <aside class="panel panel-left" style="border-right:1px solid var(--border)">
-    <div class="panel-label">What-If Simulator</div>
-    <p style="font-size:11px;color:var(--text-2);line-height:1.5">Adjust any sensor value to see plant health change instantly in 3D.</p>
+<div class="db-layout">
 
-    <div class="slider-group">
-      <div class="sim-label">Soil Moisture</div>
-      <div class="slider-row">
-        <span class="slider-name">💧 Moisture</span>
-        <input type="range" id="sl-soil" min="0" max="100" step="1" value="62"/>
-        <span class="slider-val" id="lbl-soil">62%</span>
-      </div>
-    </div>
-
-    <div class="slider-group">
-      <div class="sim-label">Temperature</div>
-      <div class="slider-row">
-        <span class="slider-name">🌡 Temp</span>
-        <input type="range" id="sl-temp" min="0" max="60" step="0.5" value="25"/>
-        <span class="slider-val" id="lbl-temp">25°C</span>
-      </div>
-    </div>
-
-    <div class="slider-group">
-      <div class="sim-label">Humidity</div>
-      <div class="slider-row">
-        <span class="slider-name">🌫 Humidity</span>
-        <input type="range" id="sl-humidity" min="0" max="100" step="1" value="65"/>
-        <span class="slider-val" id="lbl-humidity">65%</span>
-      </div>
-    </div>
-
-    <div class="slider-group">
-      <div class="sim-label">Light Intensity</div>
-      <div class="slider-row">
-        <span class="slider-name">☀ Light</span>
-        <input type="range" id="sl-light" min="0" max="1000" step="10" value="450"/>
-        <span class="slider-val" id="lbl-light">450 lux</span>
-      </div>
-    </div>
-
-    <div class="sim-health-card">
-      <div style="font-family:var(--mono);font-size:9px;letter-spacing:.13em;color:var(--text-3);text-transform:uppercase">Health Score</div>
-      <div style="display:flex;align-items:baseline;gap:6px">
-        <span class="sim-score-big" id="sim-score">—</span>
-        <span style="font-family:var(--mono);font-size:13px;color:var(--text-2)">/100</span>
-      </div>
-      <div class="sim-score-label" id="sim-label">—</div>
-      <div style="height:4px;background:var(--border2);border-radius:2px;overflow:hidden;margin-top:2px">
-        <div id="sim-bar" style="height:100%;background:var(--sage-dim);width:0%;transition:width .5s ease,background .4s;border-radius:2px"></div>
-      </div>
-    </div>
-
-    <div class="panel-label">Explanation</div>
-    <div class="sim-explain-box" id="sim-explain">Adjust sliders to see explanation.</div>
-
-    <div class="panel-label">Irrigation Status</div>
-    <div class="irrig-details">
-      <div class="irrig-row"><span>Needed</span><strong id="sim-irr-needed">—</strong></div>
-      <div class="irrig-row"><span>Water</span><strong id="sim-irr-water">—</strong></div>
-      <div class="irrig-row"><span>Runtime</span><strong id="sim-irr-runtime">—</strong></div>
-    </div>
-
-    <button id="btn-apply-sim" class="btn-predict" style="margin-top:4px">💧 Simulate Irrigation on 3D</button>
-  </aside>
-
-  <section class="panel-center">
-    <div class="twin-header">
+  <!-- LEFT: 3D -->
+  <div class="col-3d">
+    <div class="col-3d-header">
       <span class="twin-title">What-If Visualisation</span>
       <span class="twin-subtitle" id="sim-badge">— / 100</span>
     </div>
     <div id="three-canvas-wrap">
       <canvas id="three-canvas"></canvas>
       <div class="plant-glow" id="plant-glow"></div>
-      <div class="canvas-overlay-text" id="canvas-overlay">Loading 3D model…</div>
+      <div class="canvas-overlay-text" id="canvas-overlay">Loading farm model…</div>
     </div>
-    <div style="display:flex;gap:0;height:44px;border-top:1px solid var(--border);flex-shrink:0">
+    <!-- Condition bar pinned to bottom of 3D col -->
+    <div style="position:absolute;bottom:0;left:0;right:0;display:flex;border-top:1px solid var(--border);background:rgba(244,242,238,.9);backdrop-filter:blur(6px)">
       <div class="sim-cond-cell" id="cond-soil">💧 Soil: —</div>
       <div class="sim-cond-cell" id="cond-temp">🌡 Temp: —</div>
-      <div class="sim-cond-cell" id="cond-humidity">🌫 Hum: —</div>
+      <div class="sim-cond-cell" id="cond-hum">🌫 Hum: —</div>
       <div class="sim-cond-cell" id="cond-light">☀ Light: —</div>
     </div>
-  </section>
-</main>
+  </div>
+
+  <!-- RIGHT: controls -->
+  <main class="col-right">
+
+    <div class="right-section">
+      <div class="panel-label">What-If Simulator</div>
+      <p style="font-size:12px;color:var(--text-2);line-height:1.5">Adjust any sensor to see plant health change instantly in 3D.</p>
+    </div>
+
+    <div class="right-section">
+      <div class="slider-group">
+        <div class="sim-label">Soil Moisture</div>
+        <div class="slider-row">
+          <span class="slider-name">💧 Moisture</span>
+          <input type="range" id="sl-soil" min="0" max="100" step="1" value="62"/>
+          <span class="slider-val" id="lbl-soil">62%</span>
+        </div>
+      </div>
+      <div class="slider-group">
+        <div class="sim-label">Temperature</div>
+        <div class="slider-row">
+          <span class="slider-name">🌡 Temp</span>
+          <input type="range" id="sl-temp" min="0" max="60" step="0.5" value="25"/>
+          <span class="slider-val" id="lbl-temp">25°C</span>
+        </div>
+      </div>
+      <div class="slider-group">
+        <div class="sim-label">Humidity</div>
+        <div class="slider-row">
+          <span class="slider-name">🌫 Humidity</span>
+          <input type="range" id="sl-hum" min="0" max="100" step="1" value="65"/>
+          <span class="slider-val" id="lbl-hum">65%</span>
+        </div>
+      </div>
+      <div class="slider-group">
+        <div class="sim-label">Light Intensity</div>
+        <div class="slider-row">
+          <span class="slider-name">☀ Light</span>
+          <input type="range" id="sl-light" min="0" max="1000" step="10" value="450"/>
+          <span class="slider-val" id="lbl-light">450 lux</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-section">
+      <div class="panel-label">Health Score</div>
+      <div class="sim-health-card">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.1em">Score</div>
+        <div style="display:flex;align-items:baseline;gap:5px">
+          <span class="sim-score-big" id="sim-score">—</span>
+          <span style="font-family:var(--mono);font-size:13px;color:var(--text-2)">/100</span>
+        </div>
+        <span class="sim-score-label" id="sim-label">—</span>
+        <div style="height:4px;background:var(--border2);border-radius:2px;overflow:hidden;margin-top:3px">
+          <div id="sim-bar" style="height:100%;background:var(--sage-dim);width:0%;border-radius:2px;transition:width .5s,background .4s"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-section">
+      <div class="panel-label">Explanation</div>
+      <div class="sim-explain-box" id="sim-explain">Adjust sliders to see explanation.</div>
+    </div>
+
+    <div class="right-section" style="flex:1">
+      <div class="panel-label">Irrigation Status</div>
+      <div class="irrig-details">
+        <div class="irrig-row"><span>Needed</span><strong id="sim-needed">—</strong></div>
+        <div class="irrig-row"><span>Water</span><strong id="sim-water">—</strong></div>
+        <div class="irrig-row"><span>Runtime</span><strong id="sim-runtime">—</strong></div>
+      </div>
+      <button class="btn-primary" id="btn-apply-sim" style="margin-top:8px">💧 Simulate Irrigation on 3D</button>
+    </div>
+
+  </main>
+</div>
+
+<nav class="mobile-nav">
+  <div class="mobile-nav-inner">
+    <a class="mobile-nav-item" href="index.html">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </a>
+    <a class="mobile-nav-item active" href="simulator.html">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      Simulator
+    </a>
+    <a class="mobile-nav-item" href="predictions.html">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Predictions
+    </a>
+    <a class="mobile-nav-item" href="history.html">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      History
+    </a>
+  </div>
+</nav>
 
 <div class="toast" id="toast"></div>
 
 <script src="js/three_scene.js"></script>
 <script>
-const API_BASE = window.API_BASE || 'http://localhost:5000';
+const API_BASE = AgroApp.API_BASE;
 let debounceTimer = null;
-
-setInterval(() => {
-  const el = document.getElementById('header-clock');
-  if (el) el.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}, 1000);
-
-function showToast(msg, type = 'info') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = `toast show ${type}`;
-  setTimeout(() => { el.className = 'toast'; }, 3000);
-}
 
 function getValues() {
   return {
     soil:     parseFloat(document.getElementById('sl-soil').value),
     temp:     parseFloat(document.getElementById('sl-temp').value),
-    humidity: parseFloat(document.getElementById('sl-humidity').value),
+    humidity: parseFloat(document.getElementById('sl-hum').value),
     light:    parseFloat(document.getElementById('sl-light').value),
   };
 }
 
-function updateLabels(v) {
-  document.getElementById('lbl-soil').textContent     = `${v.soil}%`;
-  document.getElementById('lbl-temp').textContent     = `${v.temp}°C`;
-  document.getElementById('lbl-humidity').textContent = `${v.humidity}%`;
-  document.getElementById('lbl-light').textContent    = `${v.light} lux`;
-  document.getElementById('cond-soil').textContent     = `💧 Soil: ${v.soil}%`;
-  document.getElementById('cond-temp').textContent     = `🌡 Temp: ${v.temp}°C`;
-  document.getElementById('cond-humidity').textContent = `🌫 Hum: ${v.humidity}%`;
-  document.getElementById('cond-light').textContent    = `☀ Light: ${v.light} lux`;
-}
-
 function localHealth(v) {
-  function score(val, lo, hi, wLo, wHi) {
+  function sc(val, lo, hi, wLo, wHi) {
     if (val >= lo && val <= hi) return 100;
-    const dev = val < lo ? lo - val : val - hi;
-    const worst = val < lo ? wLo : wHi;
-    return Math.max(0, 100 - (dev / (worst || 1)) * 100);
+    const d = val < lo ? lo - val : val - hi;
+    const w = val < lo ? wLo : wHi;
+    return Math.max(0, 100 - (d / (w||1)) * 100);
   }
-  const s = 0.40 * score(v.soil, 50, 80, 50, 20)
-          + 0.25 * score(v.temp, 18, 30, 18, 30)
-          + 0.20 * score(v.humidity, 50, 80, 50, 20)
-          + 0.15 * score(v.light, 300, 700, 300, 300);
-  return Math.round(Math.min(100, Math.max(0, s)));
+  return Math.round(Math.min(100, Math.max(0,
+    0.4*sc(v.soil,50,80,50,20) + 0.25*sc(v.temp,18,30,18,30) +
+    0.2*sc(v.humidity,50,80,50,20) + 0.15*sc(v.light,300,700,300,300)
+  )));
 }
 
-function renderHealth(score) {
+function renderHealthLocal(score) {
+  const col = AgroApp.healthColor(score);
+  const bg  = AgroApp.healthBg(score);
+  const lbl = AgroApp.healthLabel(score);
   const scoreEl = document.getElementById('sim-score');
-  const labelEl = document.getElementById('sim-label');
   const barEl   = document.getElementById('sim-bar');
+  const lblEl   = document.getElementById('sim-label');
   const badgeEl = document.getElementById('sim-badge');
-  const label   = score >= 75 ? 'Healthy' : score >= 50 ? 'Moderate' : 'Critical';
-  const color   = score >= 75 ? 'var(--ok)' : score >= 50 ? 'var(--warn)' : 'var(--crit)';
-  const bgCol   = score >= 75 ? 'var(--sage-dim)' : score >= 50 ? 'rgba(184,154,78,0.7)' : 'var(--crit)';
-  if (scoreEl) { scoreEl.textContent = score; scoreEl.style.color = color; }
-  if (labelEl) { labelEl.textContent = label; labelEl.style.color = color; }
-  if (barEl)   { barEl.style.width = `${score}%`; barEl.style.background = bgCol; }
-  if (badgeEl) { badgeEl.textContent = `Health ${score}/100`; badgeEl.style.color = color; }
+  if (scoreEl) { scoreEl.textContent = score; scoreEl.style.color = col; }
+  if (barEl)   { barEl.style.width = `${score}%`; barEl.style.background = bg; }
+  if (lblEl)   { lblEl.textContent = lbl; lblEl.style.color = col; }
+  if (badgeEl) { badgeEl.textContent = `Health ${score}/100`; badgeEl.style.color = col; }
   if (typeof ThreeScene !== 'undefined') ThreeScene.updateHealth(score);
+}
+
+function updateLabels(v) {
+  document.getElementById('lbl-soil').textContent  = `${v.soil}%`;
+  document.getElementById('lbl-temp').textContent  = `${v.temp}°C`;
+  document.getElementById('lbl-hum').textContent   = `${v.humidity}%`;
+  document.getElementById('lbl-light').textContent = `${v.light} lux`;
+  document.getElementById('cond-soil').textContent  = `💧 Soil: ${v.soil}%`;
+  document.getElementById('cond-temp').textContent  = `🌡 Temp: ${v.temp}°C`;
+  document.getElementById('cond-hum').textContent   = `🌫 Hum: ${v.humidity}%`;
+  document.getElementById('cond-light').textContent = `☀ Light: ${v.light} lux`;
 }
 
 async function fetchWhatIf(v) {
   try {
     const res  = await fetch(`${API_BASE}/whatif`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(v),
-      signal: AbortSignal.timeout(4000),
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(v), signal: AbortSignal.timeout(4000),
     });
     const data = await res.json();
     if (!data.success) return;
-    document.getElementById('sim-explain').textContent     = data.explanation || '—';
-    document.getElementById('sim-irr-needed').textContent  = data.irrigation?.irrigation_needed ? '✓ Yes' : '✗ No';
-    document.getElementById('sim-irr-water').textContent   = (data.irrigation?.water_needed_liters || 0) + ' L';
-    document.getElementById('sim-irr-runtime').textContent = (data.irrigation?.runtime_minutes || 0) + ' min';
-  } catch (_) {
-    document.getElementById('sim-explain').textContent = 'Backend offline — showing local estimate';
+    const expl  = document.getElementById('sim-explain');
+    const need  = document.getElementById('sim-needed');
+    const water = document.getElementById('sim-water');
+    const rtime = document.getElementById('sim-runtime');
+    if (expl)  expl.textContent  = data.explanation || '—';
+    if (need)  { need.textContent = data.irrigation?.irrigation_needed ? '✓ Yes' : '✗ No'; need.style.color = data.irrigation?.irrigation_needed ? 'var(--warn)' : 'var(--ok)'; }
+    if (water) water.textContent = (data.irrigation?.water_needed_liters || 0) + ' L';
+    if (rtime) rtime.textContent = (data.irrigation?.runtime_minutes    || 0) + ' min';
+  } catch(_) {
+    const expl = document.getElementById('sim-explain');
+    if (expl) expl.textContent = 'Backend offline — showing local estimate';
   }
 }
 
 function onSliderChange() {
   const v = getValues();
   updateLabels(v);
-  renderHealth(localHealth(v));
+  renderHealthLocal(localHealth(v));
   clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => fetchWhatIf(v), 350);
+  debounceTimer = setTimeout(() => fetchWhatIf(v), 300);
 }
 
-['sl-soil','sl-temp','sl-humidity','sl-light'].forEach(id => {
+['sl-soil','sl-temp','sl-hum','sl-light'].forEach(id => {
   document.getElementById(id).addEventListener('input', onSliderChange);
 });
 
 document.getElementById('btn-apply-sim').addEventListener('click', () => {
   if (typeof ThreeScene !== 'undefined' && ThreeScene.triggerWater) {
     ThreeScene.triggerWater(7);
-    showToast('Irrigation simulation applied to 3D model', 'success');
+    AgroApp.toast('Irrigation simulation applied to 3D model', 'success');
   }
 });
 
-document.addEventListener('DOMContentLoaded', () => { onSliderChange(); });
+document.addEventListener('DOMContentLoaded', onSliderChange);
 </script>
 </body>
 </html>

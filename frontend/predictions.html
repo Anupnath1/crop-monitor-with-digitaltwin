@@ -2,284 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+  <meta name="theme-color" content="#4a7e50"/>
   <title>AgroTwin — Predictions</title>
+  <link rel="stylesheet" href="css/style.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="js/firebase_config.js"></script>
-  <link rel="stylesheet" href="css/style.css?v=2"/>
-  <style>
-    .pred-layout {
-      position: fixed;
-      top: var(--header-h);
-      left: 0; right: 0; bottom: 0;
-      display: grid;
-      grid-template-columns: 1fr 340px;
-    }
-
-    /* ── LEFT: 3D ── */
-    .pred-3d-col {
-      position: relative;
-      background: var(--bg);
-      overflow: hidden;
-    }
-    .pred-3d-col .twin-header {
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      z-index: 10;
-      background: rgba(255,255,255,0.82);
-      backdrop-filter: blur(6px);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 16px 8px;
-      border-bottom: 1px solid var(--border);
-    }
-    #three-canvas-wrap {
-      position: absolute;
-      inset: 0;
-    }
-
-    /* ── RIGHT: all controls ── */
-    .pred-right-col {
-      background: var(--surface);
-      border-left: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto;
-    }
-
-    .pred-section {
-      padding: 12px 14px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    /* ── Slider ── */
-    .minute-slider-wrap {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .slider-top-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-    }
-    .slider-current-val {
-      font-family: var(--mono);
-      font-size: 22px;
-      font-weight: 500;
-      color: var(--text);
-    }
-    .slider-unit-sm {
-      font-family: var(--mono);
-      font-size: 10px;
-      color: var(--text-3);
-      margin-left: 3px;
-    }
-    input[type=range].minute-slider {
-      width: 100%;
-      accent-color: var(--sage-dim);
-      cursor: pointer;
-      height: 5px;
-    }
-    .slider-ticks {
-      display: flex;
-      justify-content: space-between;
-      font-family: var(--mono);
-      font-size: 9px;
-      color: var(--text-3);
-    }
-
-    /* ── Comparison cards: current vs predicted ── */
-    .compare-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-    .compare-card {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 10px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-    .compare-card-label {
-      font-family: var(--mono);
-      font-size: 9px;
-      text-transform: uppercase;
-      letter-spacing: .1em;
-      color: var(--text-3);
-    }
-    .compare-card-val {
-      font-family: var(--mono);
-      font-size: 26px;
-      font-weight: 500;
-      color: var(--text);
-      line-height: 1.1;
-      transition: color .4s;
-    }
-    .compare-card-unit {
-      font-family: var(--mono);
-      font-size: 9px;
-      color: var(--text-3);
-    }
-    .compare-card.predicted {
-      border-color: var(--sage-dim);
-      background: var(--sage-pale);
-    }
-    .compare-card.predicted .compare-card-label {
-      color: var(--sage);
-    }
-
-    /* ── Moisture bar diff ── */
-    .moisture-diff-wrap {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-    .moisture-diff-label {
-      font-family: var(--mono);
-      font-size: 9px;
-      color: var(--text-3);
-      text-transform: uppercase;
-      letter-spacing: .08em;
-    }
-    .diff-bar-track {
-      height: 8px;
-      background: var(--border2);
-      border-radius: 4px;
-      overflow: hidden;
-      position: relative;
-    }
-    .diff-bar-current {
-      position: absolute;
-      left: 0; top: 0; bottom: 0;
-      background: var(--blue);
-      border-radius: 4px;
-      transition: width .8s ease;
-    }
-    .diff-bar-predicted {
-      position: absolute;
-      left: 0; top: 0; bottom: 0;
-      background: var(--sage-dim);
-      border-radius: 4px;
-      opacity: 0.7;
-      transition: width .8s ease;
-    }
-    .diff-legend {
-      display: flex;
-      gap: 12px;
-      font-family: var(--mono);
-      font-size: 9px;
-      color: var(--text-2);
-    }
-    .diff-legend-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      display: inline-block;
-      margin-right: 4px;
-      vertical-align: middle;
-    }
-
-    /* ── Health ── */
-    .health-score-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .health-big-num {
-      font-family: var(--mono);
-      font-size: 40px;
-      font-weight: 500;
-      color: var(--text);
-      transition: color .4s;
-      line-height: 1;
-    }
-    .health-right-block { flex: 1; display: flex; flex-direction: column; gap: 5px; }
-    .health-track { height: 5px; background: var(--border2); border-radius: 3px; overflow: hidden; }
-    .health-fill  { height: 100%; background: var(--sage-dim); border-radius: 3px; width: 0%; transition: width .7s ease, background .4s; }
-    .health-lbl   { font-family: var(--mono); font-size: 10px; color: var(--text-2); }
-    .health-expl  { font-size: 10px; color: var(--text-2); line-height: 1.5; }
-
-    /* ── Irrigation status ── */
-    .irrig-status-badge {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      background: var(--surface2);
-    }
-    .irrig-status-icon { font-size: 20px; }
-    .irrig-status-text { font-family: var(--mono); font-size: 11px; color: var(--text-2); flex: 1; }
-    .irrig-status-badge.required { border-color: var(--warn); background: rgba(184,154,78,0.07); }
-    .irrig-status-badge.ok       { border-color: var(--sage-dim); background: rgba(61,92,64,0.07); }
-
-    .stat-grid-2col {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 5px;
-    }
-    .stat-cell {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      padding: 7px 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .stat-cell-label { font-size: 9px; color: var(--text-3); font-family: var(--mono); text-transform: uppercase; letter-spacing: .08em; }
-    .stat-cell-val   { font-family: var(--mono); font-size: 14px; color: var(--text); font-weight: 500; }
-
-    /* ── Buttons ── */
-    .pred-run-btn {
-      background: var(--sage-dim);
-      border: none;
-      color: var(--text);
-      font-family: var(--mono);
-      font-size: 10px;
-      font-weight: 500;
-      padding: 9px;
-      border-radius: 6px;
-      cursor: pointer;
-      width: 100%;
-      transition: background .2s;
-      letter-spacing: .04em;
-    }
-    .pred-run-btn:hover { background: var(--sage); }
-    .pred-run-btn:disabled { background: var(--border2); color: var(--text-3); cursor: wait; }
-
-    .irrig-trigger-btn {
-      background: transparent;
-      border: 1px solid var(--blue);
-      color: var(--blue);
-      font-family: var(--mono);
-      font-size: 10px;
-      padding: 8px;
-      border-radius: 6px;
-      cursor: pointer;
-      width: 100%;
-      transition: all .2s;
-    }
-    .irrig-trigger-btn:hover { background: var(--sage-pale); }
-    .irrig-trigger-btn:disabled { opacity: .4; cursor: wait; }
-
-    .loading-note {
-      font-family: var(--mono);
-      font-size: 10px;
-      color: var(--text-3);
-      text-align: center;
-      padding: 4px 0;
-    }
-  </style>
+  <script src="js/theme.js"></script>
+  <script src="js/app.js"></script>
 </head>
 <body>
 
@@ -296,15 +29,17 @@
     <a class="nav-tab" href="index.html">Dashboard</a>
     <a class="nav-tab" href="simulator.html">Simulator</a>
     <a class="nav-tab active" href="predictions.html">Predictions</a>
+    <a class="nav-tab" href="history.html">History</a>
   </nav>
   <div class="header-time" id="header-clock">--:--:--</div>
 </header>
 
-<div class="pred-layout">
+<div class="offline-banner" id="offline-banner"></div>
 
-  <!-- ══ LEFT: 3D farm ══ -->
-  <div class="pred-3d-col">
-    <div class="twin-header">
+<div class="db-layout">
+
+  <div class="col-3d">
+    <div class="col-3d-header">
       <span class="twin-title">Farm Digital Twin — Forecast View</span>
       <span class="twin-subtitle" id="twin-health-badge">— / 100</span>
     </div>
@@ -315,10 +50,8 @@
     </div>
   </div>
 
-  <!-- ══ RIGHT: prediction panel ══ -->
-  <div class="pred-right-col">
+  <main class="col-right">
 
-    <!-- 1. Minute slider -->
     <div class="pred-section">
       <div class="panel-label">Forecast Horizon</div>
       <div class="minute-slider-wrap">
@@ -327,19 +60,17 @@
             <span class="slider-current-val" id="slider-display">5</span>
             <span class="slider-unit-sm">minutes ahead</span>
           </div>
-          <span style="font-family:var(--mono);font-size:9px;color:var(--text-3)" id="slider-hrs-label">≈ 0.1 h</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--text-3)" id="slider-hrs">≈ 0.1 h</span>
         </div>
-        <input type="range" class="minute-slider" id="minute-slider"
-               min="5" max="300" step="5" value="5"/>
+        <input type="range" class="minute-slider" id="minute-slider" min="5" max="300" step="5" value="5"/>
         <div class="slider-ticks">
           <span>5m</span><span>1h</span><span>2h</span><span>3h</span><span>4h</span><span>5h</span>
         </div>
       </div>
-      <button class="pred-run-btn" id="btn-predict">▶ Run Prediction</button>
-      <div class="loading-note" id="pred-loading-note" style="display:none">Fetching forecast…</div>
+      <button class="btn-predict" id="btn-predict">▶ Run Prediction</button>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--text-3);text-align:center;display:none" id="pred-loading">Fetching forecast…</div>
     </div>
 
-    <!-- 2. Current vs Predicted soil -->
     <div class="pred-section">
       <div class="panel-label">Soil Moisture — Now vs Forecast</div>
       <div class="compare-grid">
@@ -351,265 +82,191 @@
           </div>
         </div>
         <div class="compare-card predicted">
-          <div class="compare-card-label">📍 In <span id="pred-in-label">—</span></div>
+          <div class="compare-card-label green">In <span id="pred-in-label">—</span></div>
           <div style="display:flex;align-items:baseline;gap:3px">
             <span class="compare-card-val" id="pred-soil">—</span>
             <span class="compare-card-unit">%</span>
           </div>
         </div>
       </div>
-
-      <!-- Visual diff bar -->
-      <div class="moisture-diff-wrap">
-        <div class="moisture-diff-label">Moisture comparison</div>
-        <div class="diff-bar-track" style="height:10px">
-          <div class="diff-bar-current"   id="diff-bar-current"   style="width:0%"></div>
-          <div class="diff-bar-predicted" id="diff-bar-predicted" style="width:0%"></div>
-        </div>
-        <div class="diff-legend">
-          <span><span class="diff-legend-dot" style="background:var(--blue)"></span>Current</span>
-          <span><span class="diff-legend-dot" style="background:var(--sage-dim)"></span>Predicted</span>
-          <span id="diff-change-label" style="margin-left:auto;color:var(--text-3)">—</span>
-        </div>
+      <div class="diff-bar-track">
+        <div class="diff-bar-current"   id="diff-bar-current"   style="width:0%"></div>
+        <div class="diff-bar-predicted" id="diff-bar-predicted" style="width:0%"></div>
       </div>
-
-      <!-- Explanation -->
-      <div style="font-size:10px;color:var(--text-2);line-height:1.5;padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:5px" id="pred-explain">
+      <div style="display:flex;gap:10px;font-family:var(--mono);font-size:10px;color:var(--text-3)">
+        <span style="color:var(--blue)">— Current</span>
+        <span style="color:var(--sage-dim)">— Predicted</span>
+        <span style="margin-left:auto" id="diff-change">—</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-2);line-height:1.5;padding:7px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:6px" id="pred-explain">
         Run a prediction to see the forecast.
       </div>
     </div>
 
-    <!-- 3. Health score -->
     <div class="pred-section">
       <div class="panel-label">Plant Health Score</div>
-      <div class="health-score-row">
+      <div class="health-row">
         <div>
-          <span class="health-big-num" id="pred-health">—</span>
-          <div style="font-family:var(--mono);font-size:9px;color:var(--text-3)">/100</div>
+          <span class="health-score-big" id="pred-health">—</span>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text-3)">/100</div>
         </div>
-        <div class="health-right-block">
-          <div class="health-track"><div class="health-fill" id="health-fill"></div></div>
-          <div class="health-lbl" id="health-lbl">—</div>
-          <div class="health-expl" id="health-expl">—</div>
+        <div class="health-right">
+          <div class="health-bar-track"><div class="health-bar-fill" id="health-fill"></div></div>
+          <div class="health-label-sm" id="health-lbl">—</div>
         </div>
       </div>
     </div>
 
-    <!-- 4. Irrigation required -->
-    <div class="pred-section">
+    <div class="pred-section" style="flex:1">
       <div class="panel-label">Irrigation Status</div>
-
-      <div class="irrig-status-badge" id="irrig-status-badge">
-        <span class="irrig-status-icon" id="irrig-status-icon">⏳</span>
-        <span class="irrig-status-text" id="irrig-status-text">Run a prediction first</span>
+      <div class="irrig-status-badge" id="irrig-badge">
+        <span class="irrig-status-icon" id="irrig-icon">⏳</span>
+        <span class="irrig-status-text" id="irrig-text">Run a prediction first</span>
       </div>
-
       <div class="stat-grid-2col">
-        <div class="stat-cell">
-          <span class="stat-cell-label">Water Needed</span>
-          <span class="stat-cell-val" id="irrig-water">—</span>
-        </div>
-        <div class="stat-cell">
-          <span class="stat-cell-label">Runtime</span>
-          <span class="stat-cell-val" id="irrig-runtime">—</span>
-        </div>
+        <div class="stat-cell"><span class="stat-cell-label">Water Needed</span><span class="stat-cell-val" id="irrig-water">—</span></div>
+        <div class="stat-cell"><span class="stat-cell-label">Runtime</span><span class="stat-cell-val" id="irrig-runtime">—</span></div>
       </div>
-
-      <button class="irrig-trigger-btn" id="btn-irrigate">💦 Trigger Irrigation Now</button>
+      <button class="btn-secondary" id="btn-irrigate">💦 Trigger Irrigation Now</button>
     </div>
 
-  </div><!-- /pred-right-col -->
+  </main>
 </div>
+
+<nav class="mobile-nav">
+  <div class="mobile-nav-inner">
+    <a class="mobile-nav-item" href="index.html">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </a>
+    <a class="mobile-nav-item" href="simulator.html">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      Simulator
+    </a>
+    <a class="mobile-nav-item active" href="predictions.html">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Predictions
+    </a>
+    <a class="mobile-nav-item" href="history.html">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      History
+    </a>
+  </div>
+</nav>
 
 <div class="toast" id="toast"></div>
 
 <script src="js/three_scene.js"></script>
 <script>
-const API_BASE = window.API_BASE || 'http://localhost:5000';
-let currentSoil = null;   // set from Firebase listener
-let lastPrediction = null;
+const API_BASE = AgroApp.API_BASE;
+let currentSoil = null, lastPrediction = null;
 
-setInterval(() => {
-  const el = document.getElementById('header-clock');
-  if (el) el.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}, 1000);
-
-function showToast(msg, type = 'info') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = `toast show ${type}`;
-  setTimeout(() => { el.className = 'toast'; }, 3200);
-}
-
-/* ── Slider ── */
 const slider = document.getElementById('minute-slider');
-const sliderDisplay = document.getElementById('slider-display');
-const sliderHrsLabel = document.getElementById('slider-hrs-label');
-
 slider.addEventListener('input', () => {
   const val = parseInt(slider.value);
-  sliderDisplay.textContent = val;
+  document.getElementById('slider-display').textContent = val;
   const hrs = val / 60;
-  sliderHrsLabel.textContent = hrs >= 1 ? `≈ ${hrs.toFixed(1)} h` : `≈ ${(hrs * 60).toFixed(0)} min`;
+  document.getElementById('slider-hrs').textContent = hrs >= 1 ? `≈ ${hrs.toFixed(1)} h` : `≈ ${Math.round(hrs*60)} min`;
 });
 
-/* ── Render helpers ── */
+function hrsStr(min) { return min >= 60 ? `${(min/60).toFixed(1)}h` : `${min}min`; }
+
 function renderComparison(predSoil, minutes) {
-  const predSoilEl = document.getElementById('pred-soil');
-  const inLabel    = document.getElementById('pred-in-label');
-  const diffCur    = document.getElementById('diff-bar-current');
-  const diffPred   = document.getElementById('diff-bar-predicted');
-  const diffChange = document.getElementById('diff-change-label');
-
-  const hrsStr = minutes >= 60
-    ? `${(minutes/60).toFixed(1)}h`
-    : `${minutes}min`;
-
-  if (inLabel) inLabel.textContent = hrsStr;
-  if (predSoilEl) predSoilEl.textContent = predSoil.toFixed(1);
-
+  document.getElementById('pred-in-label').textContent = hrsStr(minutes);
+  document.getElementById('pred-soil').textContent     = predSoil.toFixed(1);
   if (currentSoil !== null) {
-    document.getElementById('current-soil').textContent = currentSoil.toFixed(1);
-    if (diffCur)  diffCur.style.width  = `${currentSoil}%`;
-    if (diffPred) diffPred.style.width = `${predSoil}%`;
-
+    document.getElementById('current-soil').textContent      = currentSoil.toFixed(1);
+    document.getElementById('diff-bar-current').style.width   = `${currentSoil}%`;
+    document.getElementById('diff-bar-predicted').style.width = `${predSoil}%`;
     const diff = predSoil - currentSoil;
-    if (diffChange) {
-      diffChange.textContent = diff > 0 ? `+${diff.toFixed(1)}%` : `${diff.toFixed(1)}%`;
-      diffChange.style.color = diff < -5 ? 'var(--warn)' : diff < -15 ? 'var(--crit)' : 'var(--ok)';
-    }
+    const el = document.getElementById('diff-change');
+    el.textContent = (diff >= 0 ? '+' : '') + diff.toFixed(1) + '%';
+    el.style.color = diff < -15 ? 'var(--crit)' : diff < -5 ? 'var(--warn)' : 'var(--ok)';
   }
 }
 
-function renderHealth(score, explanation) {
-  const numEl   = document.getElementById('pred-health');
-  const fillEl  = document.getElementById('health-fill');
-  const lblEl   = document.getElementById('health-lbl');
-  const explEl  = document.getElementById('health-expl');
-  const col     = score >= 75 ? 'var(--ok)' : score >= 50 ? 'var(--warn)' : 'var(--crit)';
-  const bgFill  = score >= 75 ? 'var(--sage-dim)' : score >= 50 ? 'rgba(184,154,78,.7)' : 'var(--crit)';
-  const label   = score >= 75 ? 'Healthy' : score >= 50 ? 'Moderate' : 'Critical';
-
+function renderHealth(score) {
+  const col = AgroApp.healthColor(score), bg = AgroApp.healthBg(score);
+  const numEl  = document.getElementById('pred-health');
+  const fillEl = document.getElementById('health-fill');
+  const lblEl  = document.getElementById('health-lbl');
   if (numEl)  { numEl.textContent = score.toFixed(0); numEl.style.color = col; }
-  if (fillEl) { fillEl.style.width = `${score}%`; fillEl.style.background = bgFill; }
-  if (lblEl)  lblEl.textContent = label;
-  if (explEl && explanation) explEl.textContent = explanation;
-
+  if (fillEl) { fillEl.style.width = `${score}%`; fillEl.style.background = bg; }
+  if (lblEl)  lblEl.textContent = AgroApp.healthLabel(score);
   if (typeof ThreeScene !== 'undefined') ThreeScene.updateHealth(score);
   const badge = document.getElementById('twin-health-badge');
   if (badge) { badge.textContent = `Health ${score.toFixed(0)}/100`; badge.style.color = col; }
 }
 
-function renderIrrigation(irrigData, minutes) {
-  const badge   = document.getElementById('irrig-status-badge');
-  const icon    = document.getElementById('irrig-status-icon');
-  const text    = document.getElementById('irrig-status-text');
+function renderIrrigation(irr, minutes) {
+  const badge = document.getElementById('irrig-badge');
+  const icon  = document.getElementById('irrig-icon');
+  const text  = document.getElementById('irrig-text');
+  const hs = hrsStr(minutes);
+  if (irr.irrigation_needed) {
+    if (badge) badge.className = 'irrig-status-badge required';
+    if (icon)  icon.textContent = '⚠️';
+    if (text)  text.textContent = `Irrigation required within ${hs}`;
+  } else {
+    if (badge) badge.className = 'irrig-status-badge ok';
+    if (icon)  icon.textContent = '✅';
+    if (text)  text.textContent = `No irrigation needed for ${hs}`;
+  }
   const water   = document.getElementById('irrig-water');
   const runtime = document.getElementById('irrig-runtime');
-
-  const hrsStr = minutes >= 60 ? `${(minutes/60).toFixed(1)}h` : `${minutes}min`;
-
-  if (irrigData.irrigation_needed) {
-    if (badge) { badge.className = 'irrig-status-badge required'; }
-    if (icon)  icon.textContent = '⚠️';
-    if (text)  text.textContent = `Irrigation required within ${hrsStr}`;
-  } else {
-    if (badge) { badge.className = 'irrig-status-badge ok'; }
-    if (icon)  icon.textContent = '✅';
-    if (text)  text.textContent = `No irrigation needed for ${hrsStr}`;
-  }
-
-  if (water)   water.textContent   = irrigData.water_needed_liters != null ? `${irrigData.water_needed_liters} L` : '—';
-  if (runtime) runtime.textContent = irrigData.runtime_minutes != null ? `${irrigData.runtime_minutes} min` : '—';
+  if (water)   water.textContent   = irr.water_needed_liters != null ? `${irr.water_needed_liters} L` : '—';
+  if (runtime) runtime.textContent = irr.runtime_minutes     != null ? `${irr.runtime_minutes} min`  : '—';
 }
 
-/* ── Run prediction ── */
 async function runPrediction() {
-  const btn     = document.getElementById('btn-predict');
-  const loading = document.getElementById('pred-loading-note');
+  const btn = document.getElementById('btn-predict');
+  const loading = document.getElementById('pred-loading');
   const minutes = parseInt(slider.value);
-  const hours   = minutes / 60;
-
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Predicting…';
+  const hours = minutes / 60;
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Predicting…';
   if (loading) loading.style.display = 'block';
-
   try {
-    // Prediction
-    const predRes  = await fetch(`${API_BASE}/predict`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hours }),
-    });
+    const [predRes, recRes] = await Promise.all([
+      fetch(`${API_BASE}/predict`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ hours }) }),
+      fetch(`${API_BASE}/get_recommendation`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ hours }) }),
+    ]);
     const predData = await predRes.json();
     if (!predData.success) throw new Error(predData.error || 'Prediction failed');
-
     const p = predData.predictions;
     lastPrediction = p;
-
     renderComparison(p.soil, minutes);
-
+    renderHealth(p.health_score);
     const explEl = document.getElementById('pred-explain');
     if (explEl && p.explanation) explEl.textContent = p.explanation;
-
-    renderHealth(p.health_score, p.explanation);
-
-    // Recommendation / irrigation
-    const recRes  = await fetch(`${API_BASE}/get_recommendation`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hours }),
-    });
     const recData = await recRes.json();
-    if (recData.success && recData.irrigation) {
-      renderIrrigation(recData.irrigation, minutes);
-    }
-
-    showToast(`Forecast ready — +${minutes >= 60 ? (minutes/60).toFixed(1)+'h' : minutes+'min'}`, 'success');
-
-  } catch (err) {
-    showToast(`Error: ${err.message}`, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '▶ Run Prediction';
-    if (loading) loading.style.display = 'none';
-  }
+    if (recData.success && recData.irrigation) renderIrrigation(recData.irrigation, minutes);
+    AgroApp.toast(`Forecast ready — +${hrsStr(minutes)}`, 'success');
+  } catch(e) { AgroApp.toast('Error: '+e.message, 'error'); }
+  finally { btn.disabled=false; btn.innerHTML='▶ Run Prediction'; if (loading) loading.style.display='none'; }
 }
 
-/* ── Manual irrigate ── */
-async function manualIrrigate() {
+async function triggerIrrigate() {
   const btn = document.getElementById('btn-irrigate');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Irrigating…';
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Irrigating…';
   try {
-    const res  = await fetch(`${API_BASE}/simulate_irrigation`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ water_liters: 3.0 }),
-    });
+    const res  = await fetch(`${API_BASE}/simulate_irrigation`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ water_liters: 3.0 }) });
     const data = await res.json();
     if (data.success) {
       if (typeof ThreeScene !== 'undefined') ThreeScene.triggerWater(8);
-      showToast(`Irrigation: 3L applied → soil ${data.simulation.final_moisture.toFixed(1)}%`, 'success');
+      AgroApp.toast(`Irrigation: 3L applied → soil ${data.simulation.final_moisture.toFixed(1)}%`, 'success');
     }
-  } catch (err) {
-    showToast('Backend offline: ' + err.message, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '💦 Trigger Irrigation Now';
-  }
+  } catch(e) { AgroApp.toast('Backend offline: '+e.message, 'error'); }
+  finally { btn.disabled=false; btn.innerHTML='💦 Trigger Irrigation Now'; }
 }
 
-/* ── Pick up current soil from Firebase ── */
 document.addEventListener('sensorUpdate', (e) => {
   currentSoil = e.detail.soil;
-  const el = document.getElementById('current-soil');
-  if (el && lastPrediction === null) el.textContent = currentSoil.toFixed(1);
+  if (!lastPrediction) { const el = document.getElementById('current-soil'); if (el) el.textContent = currentSoil.toFixed(1); }
 });
 
 document.getElementById('btn-predict').addEventListener('click', runPrediction);
-document.getElementById('btn-irrigate').addEventListener('click', manualIrrigate);
+document.getElementById('btn-irrigate').addEventListener('click', triggerIrrigate);
 </script>
-
 <script src="js/firebase_listener.js"></script>
 </body>
 </html>

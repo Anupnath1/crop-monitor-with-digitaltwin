@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+  <meta name="theme-color" content="#4a7e50"/>
+  <title>AgroTwin — History</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/app.js"></script>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-brand">
+    <svg class="brand-icon" viewBox="0 0 24 24" fill="none">
+      <path d="M12 3C9 3 6 6.5 6 10c0 5 6 11 6 11s6-6 6-11c0-3.5-3-7-6-7z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      <circle cx="12" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+    <span class="brand-name">AgroTwin</span>
+    <span class="brand-tag">Digital Twin v1.0</span>
+  </div>
+  <nav class="nav-tabs">
+    <a class="nav-tab" href="index.html">Dashboard</a>
+    <a class="nav-tab" href="simulator.html">Simulator</a>
+    <a class="nav-tab" href="predictions.html">Predictions</a>
+    <a class="nav-tab active" href="history.html">History</a>
+  </nav>
+  <div class="header-time" id="header-clock">--:--:--</div>
+</header>
+
+<div class="offline-banner" id="offline-banner"></div>
+
+<!-- History uses natural scroll, not fixed layout -->
+<div class="scroll-page">
+
+  <!-- Charts row -->
+  <div class="history-top">
+    <div class="chart-panel">
+      <div class="chart-panel-title">Soil Moisture — Historical</div>
+      <canvas id="chart-soil"></canvas>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-panel-title">Health Score — Historical</div>
+      <canvas id="chart-health"></canvas>
+    </div>
+  </div>
+
+  <!-- Stats strip -->
+  <div class="stats-strip">
+    <div class="stat-block">
+      <div class="stat-block-label">Total Readings</div>
+      <div class="stat-block-val" id="stat-total">—</div>
+      <div class="stat-block-sub">in history</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-block-label">Avg Soil</div>
+      <div class="stat-block-val" id="stat-avg-soil">—</div>
+      <div class="stat-block-sub">percent</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-block-label">Avg Health</div>
+      <div class="stat-block-val" id="stat-avg-health">—</div>
+      <div class="stat-block-sub">out of 100</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-block-label">Low Soil Events</div>
+      <div class="stat-block-val" id="stat-irrig">—</div>
+      <div class="stat-block-sub">below 45%</div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap" style="flex:1">
+    <div class="table-header-row">
+      <span class="table-title">Sensor Log</span>
+      <div class="table-actions">
+        <select class="limit-select" id="limit-select">
+          <option value="50">Last 50</option>
+          <option value="100" selected>Last 100</option>
+          <option value="200">Last 200</option>
+          <option value="500">Last 500</option>
+        </select>
+        <button class="btn-sm" id="btn-refresh">↺ Refresh</button>
+        <button class="btn-sm primary" id="btn-export">↓ Export CSV</button>
+      </div>
+    </div>
+    <div id="table-container">
+      <div class="empty-state">
+        <div class="skeleton skeleton-text" style="margin:0 auto 8px"></div>
+        <div class="skeleton skeleton-text" style="margin:0 auto;width:60%"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Mobile bottom nav -->
+<nav class="mobile-nav">
+  <div class="mobile-nav-inner">
+    <a class="mobile-nav-item" href="index.html">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </a>
+    <a class="mobile-nav-item" href="simulator.html">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      Simulator
+    </a>
+    <a class="mobile-nav-item" href="predictions.html">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Predictions
+    </a>
+    <a class="mobile-nav-item active" href="history.html">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      History
+    </a>
+  </div>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = AgroApp.API_BASE;
+let allReadings = [], soilChart = null, healthChart = null;
+
+function initCharts() {
+  const c    = Theme.colors();
+  const opts = Theme.chartOpts();
+  const noAnim = { ...opts, animation: false };
+
+  soilChart = new Chart(document.getElementById('chart-soil'), {
+    type: 'line',
+    data: { labels: [], datasets: [{
+      label: 'Soil %', data: [],
+      borderColor: c.blue, borderWidth: 1.5,
+      pointRadius: 0, tension: 0.3,
+      fill: true, backgroundColor: c.blue + '18',
+    }]},
+    options: noAnim,
+  });
+
+  healthChart = new Chart(document.getElementById('chart-health'), {
+    type: 'line',
+    data: { labels: [], datasets: [{
+      label: 'Health', data: [],
+      borderColor: c.sageDim, borderWidth: 1.5,
+      pointRadius: 0, tension: 0.3,
+      fill: true, backgroundColor: c.sageDim + '18',
+    }]},
+    options: noAnim,
+  });
+}
+
+function updateCharts(readings) {
+  const MAX  = 80;
+  const step = Math.max(1, Math.ceil(readings.length / MAX));
+  const sample = readings.filter((_, i) => i % step === 0);
+  const labels = sample.map(r =>
+    r.timestamp ? String(r.timestamp).replace('T',' ').slice(11,16) : '—'
+  );
+  soilChart.data.labels = labels;
+  soilChart.data.datasets[0].data = sample.map(r => r.soil ?? null);
+  soilChart.update('none');
+  healthChart.data.labels = labels;
+  healthChart.data.datasets[0].data = sample.map(r => r.health_score ?? null);
+  healthChart.update('none');
+}
+
+function updateStats(readings) {
+  const n = readings.length;
+  const avgSoil   = readings.reduce((a,r) => a+(r.soil||0), 0) / (n||1);
+  const avgHealth = readings.reduce((a,r) => a+(r.health_score||0), 0) / (n||1);
+  const lowSoil   = readings.filter(r => (r.soil||100) < 45).length;
+  document.getElementById('stat-total').textContent      = n;
+  document.getElementById('stat-avg-soil').textContent   = avgSoil.toFixed(1) + '%';
+  document.getElementById('stat-avg-health').textContent = avgHealth.toFixed(0);
+  document.getElementById('stat-irrig').textContent      = lowSoil;
+}
+
+function renderTable(readings) {
+  const container = document.getElementById('table-container');
+  if (!readings.length) {
+    container.innerHTML = '<div class="empty-state">No data found. Push sensor readings from your ESP32 first.</div>';
+    return;
+  }
+  const rows = readings.slice().reverse().map(r => {
+    const score = r.health_score ?? 0;
+    const cls   = score >= 75 ? 'healthy' : score >= 50 ? 'moderate' : 'critical';
+    const lbl   = score >= 75 ? 'Healthy' : score >= 50 ? 'Moderate' : 'Critical';
+    const ts    = r.timestamp ? String(r.timestamp).replace('T',' ').slice(0,19) : '—';
+    return `<tr>
+      <td>${ts}</td>
+      <td class="val">${r.soil     != null ? r.soil.toFixed(1)     : '—'}</td>
+      <td class="val">${r.temp     != null ? r.temp.toFixed(1)     : '—'}</td>
+      <td class="val">${r.humidity != null ? r.humidity.toFixed(1) : '—'}</td>
+      <td class="val">${r.light    != null ? Math.round(r.light)   : '—'}</td>
+      <td><span class="health-badge ${cls}">${score.toFixed(0)} — ${lbl}</span></td>
+    </tr>`;
+  }).join('');
+  container.innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Timestamp</th><th>Soil %</th><th>Temp °C</th>
+        <th>Humidity %</th><th>Light lux</th><th>Health</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+async function loadHistory() {
+  const limit = document.getElementById('limit-select').value;
+  const btn   = document.getElementById('btn-refresh');
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const res  = await fetch(`${API_BASE}/history?limit=${limit}`);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed');
+    allReadings = data.readings;
+    updateCharts(allReadings);
+    updateStats(allReadings);
+    renderTable(allReadings);
+    AgroApp.toast(`Loaded ${allReadings.length} readings`, 'success');
+  } catch(e) {
+    document.getElementById('table-container').innerHTML =
+      `<div class="empty-state">Backend offline or no data yet.<br>
+       <span style="font-size:10px;color:var(--text-3)">${e.message}</span></div>`;
+    AgroApp.toast('Load failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '↺ Refresh';
+  }
+}
+
+function exportCSV() {
+  if (!allReadings.length) { AgroApp.toast('No data to export', 'error'); return; }
+  const header = ['timestamp','soil','temp','humidity','light','health_score'];
+  const rows   = allReadings.map(r => header.map(k => r[k] ?? '').join(','));
+  const csv    = [header.join(','), ...rows].join('\n');
+  const url    = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  const a      = Object.assign(document.createElement('a'), {
+    href: url, download: `agrotwin_${Date.now()}.csv`
+  });
+  a.click(); URL.revokeObjectURL(url);
+  AgroApp.toast('CSV exported', 'success');
+}
+
+document.getElementById('btn-refresh').addEventListener('click', loadHistory);
+document.getElementById('btn-export').addEventListener('click', exportCSV);
+document.getElementById('limit-select').addEventListener('change', loadHistory);
+
+document.addEventListener('DOMContentLoaded', () => {
+  initCharts();
+  loadHistory();
+});
+</script>
+</body>
+</html>

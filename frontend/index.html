@@ -2,200 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+  <meta name="theme-color" content="#4a7e50"/>
   <title>AgroTwin — Dashboard</title>
+  <link rel="stylesheet" href="css/style.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="js/firebase_config.js"></script>
-  <link rel="stylesheet" href="css/style.css?v=2"/>
-  <style>
-    .db-grid {
-      position: fixed;
-      top: var(--header-h);
-      left: 0; right: 0; bottom: 0;
-      display: grid;
-      grid-template-columns: 1fr 320px;
-    }
-
-    /* ── LEFT: 3D canvas ── */
-    .farm-col {
-      position: relative;
-      background: var(--bg);
-      overflow: hidden;
-    }
-    .farm-col .twin-header {
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      z-index: 10;
-      background: rgba(255,255,255,0.82);
-      backdrop-filter: blur(6px);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 16px 8px;
-      border-bottom: 1px solid var(--border);
-    }
-    #three-canvas-wrap {
-      position: absolute;
-      inset: 0;
-    }
-
-    /* ── RIGHT: all data ── */
-    .right-col {
-      background: var(--surface);
-      border-left: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto;
-      gap: 0;
-    }
-
-    /* ── Section blocks ── */
-    .right-section {
-      padding: 12px 14px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    /* ── Sensor row: 2×2 grid ── */
-    .sensor-grid-2x2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-    .sensor-card-sm {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 10px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-    .sensor-card-sm-icon { font-size: 14px; }
-    .sensor-card-sm-name {
-      font-family: var(--mono);
-      font-size: 9px;
-      color: var(--text-3);
-      text-transform: uppercase;
-      letter-spacing: .1em;
-    }
-    .sensor-card-sm-val {
-      font-family: var(--mono);
-      font-size: 22px;
-      font-weight: 500;
-      color: var(--text);
-      line-height: 1.1;
-      transition: color .4s;
-    }
-    .sensor-card-sm-unit {
-      font-family: var(--mono);
-      font-size: 9px;
-      color: var(--text-3);
-    }
-    .sensor-bar { height: 2px; background: var(--border2); border-radius: 2px; overflow: hidden; margin-top: 4px; }
-    .sensor-bar-fill { height: 100%; background: var(--sage-dim); border-radius: 2px; width: 0%; transition: width .9s ease; }
-
-    /* ── Health ── */
-    .health-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .health-score-big {
-      font-family: var(--mono);
-      font-size: 42px;
-      font-weight: 500;
-      color: var(--text);
-      transition: color .4s;
-      line-height: 1;
-    }
-    .health-right { flex: 1; display: flex; flex-direction: column; gap: 5px; }
-    .health-bar-track { height: 5px; background: var(--border2); border-radius: 3px; overflow: hidden; }
-    .health-bar-fill { height: 100%; background: var(--sage-dim); border-radius: 3px; width: 0%; transition: width .8s ease, background .4s; }
-    .health-label-sm { font-family: var(--mono); font-size: 10px; color: var(--text-2); }
-    .health-explain-sm { font-size: 10px; color: var(--text-2); line-height: 1.5; }
-
-    /* ── Irrigation ── */
-    .pump-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .pump-dot-big {
-      width: 12px; height: 12px;
-      border-radius: 50%;
-      background: var(--text-3);
-      transition: background .4s, box-shadow .4s;
-      flex-shrink: 0;
-    }
-    .pump-dot-big.active { background: var(--blue); box-shadow: 0 0 8px var(--blue); animation: pulse-pump 1.1s infinite; }
-    .pump-dot-big.idle   { background: var(--text-3); }
-    .pump-dot-big.alert  { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
-    .pump-label-text { font-family: var(--mono); font-size: 11px; color: var(--text-2); }
-
-    .stat-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 5px;
-    }
-    .stat-cell {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      padding: 7px 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .stat-cell-label { font-size: 9px; color: var(--text-3); font-family: var(--mono); text-transform: uppercase; letter-spacing: .08em; }
-    .stat-cell-val   { font-family: var(--mono); font-size: 14px; color: var(--text); font-weight: 500; }
-
-    .irrigate-btn {
-      background: var(--sage-dim);
-      border: none;
-      color: var(--text);
-      font-family: var(--mono);
-      font-size: 10px;
-      font-weight: 500;
-      padding: 9px;
-      border-radius: 6px;
-      cursor: pointer;
-      width: 100%;
-      transition: background .2s;
-      letter-spacing: .04em;
-    }
-    .irrigate-btn:hover { background: var(--sage); }
-    .irrigate-btn:disabled { background: var(--border2); color: var(--text-3); cursor: wait; }
-
-    /* ── Log ── */
-    .irrig-log-wrap {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      max-height: 120px;
-      overflow-y: auto;
-    }
-    .log-entry {
-      font-size: 10px;
-      color: var(--text-2);
-      font-family: var(--mono);
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 3px;
-    }
-
-    .conn-badge {
-      font-family: var(--mono);
-      font-size: 9px;
-      color: var(--text-3);
-      display: flex;
-      gap: 5px;
-    }
-  </style>
+  <script src="js/theme.js"></script>
+  <script src="js/app.js"></script>
 </head>
 <body>
 
@@ -212,6 +29,7 @@
     <a class="nav-tab active" href="index.html">Dashboard</a>
     <a class="nav-tab" href="simulator.html">Simulator</a>
     <a class="nav-tab" href="predictions.html">Predictions</a>
+    <a class="nav-tab" href="history.html">History</a>
   </nav>
   <div class="header-status">
     <div class="status-dot" id="firebase-status-dot"></div>
@@ -220,11 +38,14 @@
   </div>
 </header>
 
-<div class="db-grid">
+<div class="offline-banner" id="offline-banner"></div>
 
-  <!-- ══ LEFT: 3D Farm ══ -->
-  <div class="farm-col">
-    <div class="twin-header">
+<!-- Fixed full-screen layout below header -->
+<div class="db-layout">
+
+  <!-- LEFT: 3D farm -->
+  <div class="col-3d">
+    <div class="col-3d-header">
       <span class="twin-title">Farm Digital Twin — Live View</span>
       <span class="twin-subtitle" id="twin-health-badge">— / 100</span>
     </div>
@@ -235,15 +56,21 @@
     </div>
   </div>
 
-  <!-- ══ RIGHT: all data ══ -->
-  <div class="right-col">
+  <!-- RIGHT: data panel -->
+  <main class="col-right">
 
-    <!-- Live Sensors -->
+    <div class="right-section" id="anomaly-section" style="display:none">
+      <div class="anomaly-banner" id="anomaly-banner">
+        <span class="anomaly-icon">🚨</span>
+        <span id="anomaly-text">Anomaly detected</span>
+        <button class="anomaly-dismiss" onclick="dismissAnomaly()">✕</button>
+      </div>
+    </div>
+
     <div class="right-section">
       <div class="panel-label">Live Sensors</div>
       <div class="sensor-grid-2x2">
-
-        <div class="sensor-card-sm">
+        <div class="sensor-card-sm" id="card-soil">
           <div class="sensor-card-sm-icon">💧</div>
           <div class="sensor-card-sm-name">Soil Moisture</div>
           <div style="display:flex;align-items:baseline;gap:3px">
@@ -252,8 +79,7 @@
           </div>
           <div class="sensor-bar"><div class="sensor-bar-fill" id="bar-soil"></div></div>
         </div>
-
-        <div class="sensor-card-sm">
+        <div class="sensor-card-sm" id="card-temp">
           <div class="sensor-card-sm-icon">🌡</div>
           <div class="sensor-card-sm-name">Temperature</div>
           <div style="display:flex;align-items:baseline;gap:3px">
@@ -262,8 +88,7 @@
           </div>
           <div class="sensor-bar"><div class="sensor-bar-fill" id="bar-temp"></div></div>
         </div>
-
-        <div class="sensor-card-sm">
+        <div class="sensor-card-sm" id="card-humidity">
           <div class="sensor-card-sm-icon">🌫</div>
           <div class="sensor-card-sm-name">Humidity</div>
           <div style="display:flex;align-items:baseline;gap:3px">
@@ -272,8 +97,7 @@
           </div>
           <div class="sensor-bar"><div class="sensor-bar-fill" id="bar-humidity"></div></div>
         </div>
-
-        <div class="sensor-card-sm">
+        <div class="sensor-card-sm" id="card-light">
           <div class="sensor-card-sm-icon">☀</div>
           <div class="sensor-card-sm-name">Light</div>
           <div style="display:flex;align-items:baseline;gap:3px">
@@ -282,21 +106,16 @@
           </div>
           <div class="sensor-bar"><div class="sensor-bar-fill" id="bar-light"></div></div>
         </div>
-
       </div>
-      <div class="conn-badge">
-        <span>Last update:</span>
-        <span id="last-update-time">—</span>
-      </div>
+      <div class="conn-badge"><span>Last update:</span><span id="last-update-time">—</span></div>
     </div>
 
-    <!-- Plant Health -->
     <div class="right-section">
       <div class="panel-label">Plant Health</div>
       <div class="health-row">
         <div>
           <span class="health-score-big" id="health-score">—</span>
-          <div style="font-family:var(--mono);font-size:9px;color:var(--text-3)">/100</div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text-3)">/100</div>
         </div>
         <div class="health-right">
           <div class="health-bar-track"><div class="health-bar-fill" id="health-fill"></div></div>
@@ -306,75 +125,66 @@
       </div>
     </div>
 
-    <!-- Auto Irrigation -->
     <div class="right-section">
       <div class="panel-label">Auto Irrigation</div>
-
       <div class="pump-row">
         <div class="pump-dot-big idle" id="pump-dot-big"></div>
         <span class="pump-label-text" id="pump-status-text">Pump idle</span>
       </div>
-
       <div class="stat-grid">
-        <div class="stat-cell">
-          <span class="stat-cell-label">Moisture Deficit</span>
-          <span class="stat-cell-val" id="stat-deficit">—</span>
-        </div>
-        <div class="stat-cell">
-          <span class="stat-cell-label">Water Required</span>
-          <span class="stat-cell-val" id="stat-water">—</span>
-        </div>
-        <div class="stat-cell">
-          <span class="stat-cell-label">Runtime</span>
-          <span class="stat-cell-val" id="stat-runtime">—</span>
-        </div>
-        <div class="stat-cell">
-          <span class="stat-cell-label">Status</span>
-          <span class="stat-cell-val" id="stat-irr-needed">—</span>
-        </div>
+        <div class="stat-cell"><span class="stat-cell-label">Moisture Deficit</span><span class="stat-cell-val" id="stat-deficit">—</span></div>
+        <div class="stat-cell"><span class="stat-cell-label">Water Required</span><span class="stat-cell-val" id="stat-water">—</span></div>
+        <div class="stat-cell"><span class="stat-cell-label">Runtime</span><span class="stat-cell-val" id="stat-runtime">—</span></div>
+        <div class="stat-cell"><span class="stat-cell-label">Status</span><span class="stat-cell-val" id="stat-irr-needed">—</span></div>
       </div>
-
-      <button class="irrigate-btn" id="btn-irrigate">💦 Trigger Irrigation Now</button>
+      <button class="btn-primary" id="btn-irrigate">💦 Trigger Irrigation Now</button>
     </div>
 
-    <!-- Irrigation Log -->
-    <div class="right-section" style="flex:1">
-      <div class="panel-label">Irrigation Log</div>
+    <div class="right-section" style="flex:1;overflow-y:auto">
+      <div class="panel-label">Event Log</div>
       <div class="irrig-log-wrap" id="irrig-log">
         <div class="log-entry" style="color:var(--text-3)">No events yet</div>
       </div>
     </div>
 
-  </div><!-- /right-col -->
+  </main>
 </div>
+
+<!-- Mobile bottom nav -->
+<nav class="mobile-nav">
+  <div class="mobile-nav-inner">
+    <a class="mobile-nav-item active" href="index.html">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </a>
+    <a class="mobile-nav-item" href="simulator.html">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      Simulator
+    </a>
+    <a class="mobile-nav-item" href="predictions.html">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Predictions
+    </a>
+    <a class="mobile-nav-item" href="history.html">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      History
+    </a>
+  </div>
+</nav>
 
 <div class="toast" id="toast"></div>
 
 <script src="js/three_scene.js"></script>
 <script>
-const API_BASE = window.API_BASE || 'http://localhost:5000';
-let toastTimer = null;
+const API_BASE = AgroApp.API_BASE;
 let lastIrrigTime = 0;
-const IRRIG_COOLDOWN_MS = 5 * 60 * 1000;
-
-setInterval(() => {
-  const el = document.getElementById('header-clock');
-  if (el) el.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}, 1000);
-
-function showToast(msg, type = 'info') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = `toast show ${type}`;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3500);
-}
+const IRRIG_COOLDOWN = 5 * 60 * 1000;
 
 function renderSensor(valId, barId, value, max) {
   const v = document.getElementById(valId);
   const b = document.getElementById(barId);
   if (v) v.textContent = typeof value === 'number' ? value.toFixed(1) : '—';
-  if (b) b.style.width = `${Math.min(100, Math.max(0, (value / max) * 100))}%`;
+  if (b) b.style.width = `${Math.min(100, Math.max(0, (value/max)*100))}%`;
 }
 
 function renderHealth(score, label, explain) {
@@ -382,149 +192,147 @@ function renderHealth(score, label, explain) {
   const fillEl  = document.getElementById('health-fill');
   const labelEl = document.getElementById('health-label');
   const explEl  = document.getElementById('health-explain');
-  const col     = score >= 75 ? 'var(--ok)' : score >= 50 ? 'var(--warn)' : 'var(--crit)';
-  const bgFill  = score >= 75 ? 'var(--sage-dim)' : score >= 50 ? 'rgba(184,154,78,.7)' : 'var(--crit)';
+  const col = AgroApp.healthColor(score);
+  const bg  = AgroApp.healthBg(score);
   if (scoreEl) { scoreEl.textContent = score.toFixed(0); scoreEl.style.color = col; }
-  if (fillEl)  { fillEl.style.width = `${score}%`; fillEl.style.background = bgFill; }
-  if (labelEl) labelEl.textContent = label || (score >= 75 ? 'Healthy' : score >= 50 ? 'Moderate' : 'Critical');
+  if (fillEl)  { fillEl.style.width = `${score}%`; fillEl.style.background = bg; }
+  if (labelEl) labelEl.textContent = label || AgroApp.healthLabel(score);
   if (explEl && explain) explEl.textContent = explain;
   if (typeof ThreeScene !== 'undefined') ThreeScene.updateHealth(score);
   const badge = document.getElementById('twin-health-badge');
-  if (badge) {
-    badge.textContent = `Health ${score.toFixed(0)}/100`;
-    badge.style.color = col;
-  }
+  if (badge) { badge.textContent = `Health ${score.toFixed(0)}/100`; badge.style.color = col; }
 }
 
-function logIrrigEvent(msg) {
-  const log  = document.getElementById('irrig-log');
-  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  const item = document.createElement('div');
-  item.className = 'log-entry';
-  item.textContent = `${time} — ${msg}`;
-  if (log.firstChild?.textContent === 'No events yet') log.innerHTML = '';
-  log.insertBefore(item, log.firstChild);
-  if (log.children.length > 8) log.removeChild(log.lastChild);
+function renderAnomaly(anomaly) {
+  if (!anomaly?.has_anomaly) return;
+  const section = document.getElementById('anomaly-section');
+  const banner  = document.getElementById('anomaly-banner');
+  const text    = document.getElementById('anomaly-text');
+  if (!section || !banner) return;
+  const hasCrit = anomaly.anomalies.some(a => a.severity === 'critical');
+  const msg = anomaly.anomalies[0]?.message || 'Unusual reading detected';
+  section.style.display = 'block';
+  banner.className = `anomaly-banner show ${hasCrit ? '' : 'warning'}`;
+  text.textContent = msg;
+  anomaly.anomalies.forEach(a => {
+    const card = document.getElementById(`card-${a.sensor}`);
+    if (card) card.className = `sensor-card-sm ${a.severity}`;
+  });
+  logEvent(`⚠ Anomaly: ${msg}`, 'anomaly-log');
+}
+
+function dismissAnomaly() {
+  const s = document.getElementById('anomaly-section');
+  if (s) s.style.display = 'none';
+  ['soil','temp','humidity','light'].forEach(k => {
+    const c = document.getElementById(`card-${k}`);
+    if (c) c.className = 'sensor-card-sm';
+  });
+}
+
+function logEvent(msg, cls = '') {
+  const log = document.getElementById('irrig-log');
+  const t   = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const el  = document.createElement('div');
+  el.className = `log-entry ${cls}`;
+  el.textContent = `${t} — ${msg}`;
+  if (log.firstChild?.textContent?.includes('No events')) log.innerHTML = '';
+  log.insertBefore(el, log.firstChild);
+  if (log.children.length > 12) log.removeChild(log.lastChild);
 }
 
 async function checkAutoIrrigation(soil, health) {
   const now = Date.now();
-  const needsIrrig = soil < 45 || health < 55;
-  const dot    = document.getElementById('pump-dot-big');
-  const text   = document.getElementById('pump-status-text');
-  const needed = document.getElementById('stat-irr-needed');
-  if (needed) { needed.textContent = needsIrrig ? '⚠ Required' : '✓ OK'; needed.style.color = needsIrrig ? 'var(--warn)' : 'var(--ok)'; }
-
-  if (needsIrrig && (now - lastIrrigTime) > IRRIG_COOLDOWN_MS) {
+  const needs = soil < 45 || health < 55;
+  const dot  = document.getElementById('pump-dot-big');
+  const text = document.getElementById('pump-status-text');
+  const stat = document.getElementById('stat-irr-needed');
+  if (stat) { stat.textContent = needs ? '⚠ Required' : '✓ OK'; stat.style.color = needs ? 'var(--warn)' : 'var(--ok)'; }
+  if (needs && (now - lastIrrigTime) > IRRIG_COOLDOWN) {
     lastIrrigTime = now;
     if (dot) dot.className = 'pump-dot-big alert';
     if (text) text.textContent = 'Auto-irrigation triggered…';
     try {
       const deficit = Math.max(0, 70 - soil);
-      const water   = Math.max(0.5, deficit * 0.05);
+      const water = parseFloat(Math.max(0.5, deficit * 0.05).toFixed(1));
       const res  = await fetch(`${API_BASE}/simulate_irrigation`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ water_liters: parseFloat(water.toFixed(1)) }),
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ water_liters: water }),
       });
       const data = await res.json();
       if (data.success) {
         const sim = data.simulation;
-        if (dot)  dot.className = 'pump-dot-big active';
+        if (dot) dot.className = 'pump-dot-big active';
         if (text) text.textContent = `Pump ON — ${sim.runtime_minutes} min`;
         document.getElementById('stat-water').textContent   = `${sim.water_added_liters} L`;
         document.getElementById('stat-runtime').textContent = `${sim.runtime_minutes} min`;
-        document.getElementById('stat-deficit').textContent = `${(70 - soil).toFixed(1)}%`;
-        if (typeof ThreeScene !== 'undefined') ThreeScene.triggerWater(Math.min(10, sim.runtime_minutes * 2 + 3));
-        logIrrigEvent(`Auto: ${sim.water_added_liters}L applied (soil was ${soil.toFixed(1)}%)`);
-        showToast(`Auto-irrigation: ${sim.water_added_liters}L applied`, 'success');
-        setTimeout(() => {
-          if (dot)  dot.className = 'pump-dot-big idle';
-          if (text) text.textContent = 'Pump idle';
-        }, sim.runtime_minutes * 2000 + 3000);
+        document.getElementById('stat-deficit').textContent = `${(70-soil).toFixed(1)}%`;
+        if (typeof ThreeScene !== 'undefined') ThreeScene.triggerWater(Math.min(10, sim.runtime_minutes*2+3));
+        logEvent(`Auto: ${sim.water_added_liters}L applied (soil ${soil.toFixed(1)}%)`);
+        AgroApp.toast(`Auto-irrigation: ${sim.water_added_liters}L applied`, 'success');
+        setTimeout(() => { if (dot) dot.className='pump-dot-big idle'; if (text) text.textContent='Pump idle'; }, sim.runtime_minutes*2000+3000);
       }
-    } catch (err) {
-      if (dot)  dot.className = 'pump-dot-big idle';
-      if (text) text.textContent = 'Backend offline';
-    }
-  } else if (!needsIrrig) {
-    if (dot)  dot.className = 'pump-dot-big idle';
+    } catch(e) { if (dot) dot.className='pump-dot-big idle'; if (text) text.textContent='Backend offline'; }
+  } else if (!needs) {
+    if (dot) dot.className = 'pump-dot-big idle';
     if (text) text.textContent = 'Pump idle — conditions OK';
   }
 }
 
 async function manualIrrigate() {
   const btn = document.getElementById('btn-irrigate');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Irrigating…';
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Irrigating…';
   try {
     const res  = await fetch(`${API_BASE}/simulate_irrigation`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ water_liters: 3.0 }),
     });
     const data = await res.json();
-    if (data.success) {
-      const sim = data.simulation;
-      const dot  = document.getElementById('pump-dot-big');
-      const text = document.getElementById('pump-status-text');
-      if (dot)  dot.className = 'pump-dot-big active';
-      if (text) text.textContent = `Pump ON — ${sim.runtime_minutes} min`;
-      document.getElementById('stat-water').textContent   = `${sim.water_added_liters} L`;
-      document.getElementById('stat-runtime').textContent = `${sim.runtime_minutes} min`;
-      if (typeof ThreeScene !== 'undefined') ThreeScene.triggerWater(8);
-      logIrrigEvent(`Manual: 3.0L → soil ${sim.final_moisture.toFixed(1)}%`);
-      showToast('Manual irrigation complete', 'success');
-      lastIrrigTime = Date.now();
-      setTimeout(() => {
-        if (dot)  dot.className = 'pump-dot-big idle';
-        if (text) text.textContent = 'Pump idle';
-      }, 6000);
-    }
-  } catch (err) {
-    showToast('Backend offline: ' + err.message, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '💦 Trigger Irrigation Now';
-  }
+    if (!data.success) throw new Error(data.error || 'Failed');
+    const sim = data.simulation;
+    const dot = document.getElementById('pump-dot-big');
+    const txt = document.getElementById('pump-status-text');
+    if (dot) dot.className = 'pump-dot-big active';
+    if (txt) txt.textContent = `Pump ON — ${sim.runtime_minutes} min`;
+    document.getElementById('stat-water').textContent   = `${sim.water_added_liters} L`;
+    document.getElementById('stat-runtime').textContent = `${sim.runtime_minutes} min`;
+    if (typeof ThreeScene !== 'undefined') ThreeScene.triggerWater(8);
+    logEvent(`Manual: 3.0L → soil ${sim.final_moisture.toFixed(1)}%`);
+    AgroApp.toast('Manual irrigation complete', 'success');
+    lastIrrigTime = Date.now();
+    setTimeout(() => { if (dot) dot.className='pump-dot-big idle'; if (txt) txt.textContent='Pump idle'; }, 6000);
+  } catch(e) { AgroApp.toast('Error: '+e.message, 'error'); }
+  finally { btn.disabled=false; btn.innerHTML='💦 Trigger Irrigation Now'; }
 }
 
 document.addEventListener('sensorUpdate', async (e) => {
   const d = e.detail;
-  renderSensor('val-soil',     'bar-soil',     d.soil,     100);
-  renderSensor('val-temp',     'bar-temp',     d.temp,     60);
-  renderSensor('val-humidity', 'bar-humidity', d.humidity, 100);
-  renderSensor('val-light',    'bar-light',    d.light,    1000);
-  const el = document.getElementById('last-update-time');
-  if (el) el.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
+  renderSensor('val-soil','bar-soil',d.soil,100);
+  renderSensor('val-temp','bar-temp',d.temp,60);
+  renderSensor('val-humidity','bar-humidity',d.humidity,100);
+  renderSensor('val-light','bar-light',d.light,1000);
+  const upd = document.getElementById('last-update-time');
+  if (upd) upd.textContent = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   try {
     const res = await fetch(`${API_BASE}/get_health`, { signal: AbortSignal.timeout(4000) });
     if (res.ok) {
       const result = await res.json();
       if (result.success) {
         renderHealth(result.health_score, result.label, result.explanation);
+        if (result.anomaly) renderAnomaly(result.anomaly);
         checkAutoIrrigation(d.soil, result.health_score);
         return;
       }
     }
-  } catch (_) {}
-
-  function cs(v, lo, hi) {
-    if (v >= lo && v <= hi) return 100;
-    const dev = v < lo ? lo - v : v - hi;
-    const w = v < lo ? lo : (100 - hi);
-    return Math.max(0, 100 - (dev / (w || 1)) * 100);
-  }
-  const score = Math.min(100, Math.max(0,
-    0.4 * cs(d.soil, 50, 80) + 0.25 * cs(d.temp, 18, 30) +
-    0.2  * cs(d.humidity, 50, 80) + 0.15 * cs(d.light, 300, 700)
-  ));
+  } catch(_) {}
+  function cs(v,lo,hi){if(v>=lo&&v<=hi)return 100;const dev=v<lo?lo-v:v-hi,w=v<lo?lo:(100-hi);return Math.max(0,100-(dev/(w||1))*100);}
+  const score = Math.min(100,Math.max(0,0.4*cs(d.soil,50,80)+0.25*cs(d.temp,18,30)+0.2*cs(d.humidity,50,80)+0.15*cs(d.light,300,700)));
   renderHealth(score, null, 'Backend offline — local estimate');
   checkAutoIrrigation(d.soil, score);
 });
 
 document.getElementById('btn-irrigate').addEventListener('click', manualIrrigate);
 </script>
-
 <script src="js/firebase_listener.js"></script>
 </body>
 </html>
